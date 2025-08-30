@@ -5,20 +5,20 @@
 #  - One command: `pb install` to set up everything on macOS/Linux.
 #  - Generates local files in ~/.portable-bootstrap (aliases, PATH, completions).
 #  - Auto-wires shell startup files (bash, zsh) idempotently.
-#  - Installs Git completion for bash & zsh; optional git prompt.
+#  - Installs Git completion: bash via bashcompinit, zsh via _git autoload (no direct source).
 #  - Homebrew helpers for Apple Silicon vs Intel (install, switch env).
-#  - Git default-branch safety: pre-push hook + GitHub branch protection (via gh).
-#  - Repo scaffolding (`pb new-repo <name>`) with protections applied.
+#  - Repo scaffolding (`pb new-repo <name>`).
 # -----------------------------------------------------------------------------
 set -euo pipefail
 
-PB_VERSION="0.1.0"
+PB_VERSION="0.1.1"
 PB_HOME="${PB_HOME:-$HOME/.portable-bootstrap}"
 PB_BIN_DIR="${PB_BIN_DIR:-$HOME/.local/bin}"
 PB_NAME="${PB_NAME:-pb}"  # the command name to install
 PB_COMPLETIONS_DIR="$PB_HOME/completions"
+PB_ZFUNCDIR="$PB_COMPLETIONS_DIR/zfunc"   # for zsh autoloaded functions
 
-# URLs for completions (from upstream git repo)
+# Upstream completion sources
 GIT_COMPLETION_BASH_URL="https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash"
 GIT_COMPLETION_ZSH_URL="https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.zsh"
 GIT_PROMPT_URL="https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh"
@@ -53,7 +53,7 @@ detect_shell_rc_files() {
 }
 
 append_once() {
-  # append_once <file> <marker> <text>
+  # append_once <file> <marker> <text>  (single-line only)
   local file="$1" marker="$2" text="$3"
   touch "$file"
   if ! grep -Fq "$marker" "$file"; then
@@ -66,7 +66,6 @@ append_once() {
 
 install_command() {
   ensure_dir "$PB_BIN_DIR"
-  # If running from repo root, copy/symlink this script into PB_BIN_DIR as 'pb'
   local self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "$0")"
   ln -sf "$self" "$PB_BIN_DIR/$PB_NAME"
   ensure_in_path
@@ -86,9 +85,11 @@ case ":$PATH:" in *":$HOME/.local/bin:"*) : ;; *) export PATH="$HOME/.local/bin:
 [ -d /usr/local/bin ]   && case ":$PATH:" in *":/usr/local/bin:"*) : ;; *) export PATH="/usr/local/bin:$PATH";; esac
 EOF
 
-  # aliases.sh
+  # aliases.sh (guard against double source)
   cat > "$PB_HOME/aliases.sh" <<'EOF'
 # portable-bootstrap: common aliases & functions
+[ -n "${_PB_ALIASES_LOADED:-}" ] && return 0
+_PB_ALIASES_LOADED=1
 
 # Git QoL
 alias gs='git status'
@@ -106,25 +107,26 @@ EOF
   ok "Generated profile files in $PB_HOME"
 }
 
-# This is not working and it's because of the \n character in the middle of the src_lines variable.
-# I need to find a way to make it work.
-# The \n character is showing up directly in the output instead of being parsed as a newline.
-# I need to find a way to make it work.
-# I think I need to use printf instead of cat.
+# Newline-safe, quiet, idempotent shell wiring
 wire_shell_startup() {
   local marker="# portable-bootstrap"
-  local src_lines
-  src_lines="[ -f \"$PB_HOME/path.sh\" ] && . \"$PB_HOME/path.sh\"
-[ -f \"$PB_HOME/aliases.sh\" ] && . \"$PB_HOME/aliases.sh\""
-  local f
   while IFS= read -r f; do
-    append_once "$f" "$marker" "$src_lines"
+    touch "$f"
+    if ! grep -Fq "$marker" "$f"; then
+      {
+        printf "\n%s\n" "$marker"
+        printf '[ -f "%s/path.sh" ] && . "%s/path.sh"\n' "$PB_HOME" "$PB_HOME"
+        printf '[ -f "%s/aliases.sh" ] && . "%s/aliases.sh"\n' "$PB_HOME" "$PB_HOME"
+      } >> "$f"
+      ok "Updated $f"
+    else
+      log "Already present in $f ($marker)"
+    fi
   done < <(detect_shell_rc_files)
 }
 
 download() {
   local url="$1" dest="$2"
-  # curl or wget
   if command -v curl >/dev/null 2>&1; then
     curl -fsSL "$url" -o "$dest"
   elif command -v wget >/dev/null 2>&1; then
@@ -136,26 +138,38 @@ download() {
 
 install_git_completions() {
   ensure_dir "$PB_COMPLETIONS_DIR"
+  ensure_dir "$PB_ZFUNCDIR"
+
   log "Installing Git completions into $PB_COMPLETIONS_DIR …"
   download "$GIT_COMPLETION_BASH_URL" "$PB_COMPLETIONS_DIR/git-completion.bash"
   download "$GIT_COMPLETION_ZSH_URL"  "$PB_COMPLETIONS_DIR/git-completion.zsh"
   download "$GIT_PROMPT_URL"          "$PB_COMPLETIONS_DIR/git-prompt.sh"
 
-  # Wire for bash & zsh
-  local marker_bash="# portable-bootstrap: git completion (bash)"
-  local marker_zsh="# portable-bootstrap: git completion (zsh)"
-
-  # bash
+  # -------------------- Bash: source bash completion ------------------------
   if [ -r "$HOME/.bashrc" ]; then
-    append_once "$HOME/.bashrc" "$marker_bash" "if [ -f \"$PB_COMPLETIONS_DIR/git-completion.bash\" ]; then . \"$PB_COMPLETIONS_DIR/git-completion.bash\"; fi"
+    append_once "$HOME/.bashrc" "# portable-bootstrap: git completion (bash)" \
+'if [ -f "'"$PB_COMPLETIONS_DIR"'/git-completion.bash" ]; then . "'"$PB_COMPLETIONS_DIR"'/git-completion.bash"; fi'
   fi
-  # zsh
+
+  # -------------------- Zsh: autoload _git via fpath (NO direct source) ----
+  # Copy zsh completion to a file named _git inside zfunc dir
+  cp -f "$PB_COMPLETIONS_DIR/git-completion.zsh" "$PB_ZFUNCDIR/_git"
+
+  # Ensure $fpath contains our zfunc dir and compinit runs (idempotent)
   local zshrc="${ZDOTDIR:-$HOME}/.zshrc"
   [ -f "$zshrc" ] || touch "$zshrc"
-  append_once "$zshrc" "$marker_zsh" "autoload -U compinit && compinit
-if [ -f \"$PB_COMPLETIONS_DIR/git-completion.zsh\" ]; then . \"$PB_COMPLETIONS_DIR/git-completion.zsh\"; fi"
 
-  ok "Git completions installed and wired."
+  # Put fpath update BEFORE compinit so it’s picked up.
+  append_once "$zshrc" "# portable-bootstrap: zfunc path" \
+'fpath=("'"$PB_ZFUNCDIR"'" $fpath)'
+
+  # Initialize completion quietly; you can remove "-i" after fixing perms.
+  append_once "$zshrc" "# portable-bootstrap: compinit" \
+'autoload -Uz compinit
+compinit -i'
+
+  # IMPORTANT: do NOT source git-completion.zsh directly in zsh.
+  ok "Git completions installed and wired (bash: sourced; zsh: autoloaded _git)."
 }
 
 require() { command -v "$1" >/dev/null 2>&1 || die "Missing required tool: $1"; }
@@ -183,10 +197,9 @@ brew_prefix_intel="/usr/local"
 
 brew_detect() {
   if command -v brew >/dev/null 2>&1; then
-    echo "brew in PATH: $(command -v brew)"
     brew --version | head -n1
   else
-    echo "brew not found in PATH."
+    echo "brew not found"
   fi
 }
 
@@ -202,19 +215,16 @@ brew_install_arm() {
 brew_install_intel() {
   is_macos || die "Homebrew install helpers are for macOS."
   if [ "$(arch_name)" = "arm64" ]; then
-    # On Apple Silicon, install Intel Homebrew under Rosetta in /usr/local
     /usr/sbin/softwareupdate --install-rosetta --agree-to-license || true
     arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     ok "Intel Homebrew installed under Rosetta (likely at /usr/local)."
   else
-    # On Intel mac, normal installer (still /usr/local)
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     ok "Intel Homebrew installer completed."
   fi
 }
 
 brew_use_arm() {
-  # Temporarily prefer arm brew in current shell
   if [ -x "$brew_prefix_arm/bin/brew" ]; then
     export PATH="$brew_prefix_arm/bin:$brew_prefix_arm/sbin:$PATH"
     ok "Using Apple Silicon Homebrew ($brew_prefix_arm)."
@@ -224,7 +234,6 @@ brew_use_arm() {
 }
 
 brew_use_intel() {
-  # Temporarily prefer intel brew in current shell
   if [ -x "$brew_prefix_intel/bin/brew" ]; then
     export PATH="$brew_prefix_intel/bin:$brew_prefix_intel/sbin:$PATH"
     ok "Using Intel Homebrew ($brew_prefix_intel)."
@@ -241,8 +250,10 @@ status() {
   echo "Bin dir:  $PB_BIN_DIR"
   echo "Command:  $PB_NAME ($(command -v "$PB_NAME" || echo 'not installed'))"
   echo "OS/Arch:  $(uname -s) / $(arch_name)"
-  echo "Shell rc: $(detect_shell_rc_files | tr '\n' ' ')"
-  echo "Brew:     $(brew_detect)"
+  printf "Shell rc: "
+  detect_shell_rc_files | tr '\n' ' '; echo
+  printf "Brew:     "
+  brew_detect
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "Repo:     $(git rev-parse --show-toplevel)"
     echo "Origin:   $(git remote get-url origin 2>/dev/null || echo 'none')"
@@ -257,14 +268,13 @@ install() {
   generate_profile_files
   wire_shell_startup
   install_git_completions
-  ok "Install complete. Restart your shell to load aliases & completions."
+  ok "Install complete. Open a NEW terminal to load aliases & completions."
 }
 
 uninstall() {
   log "Removing $PB_BIN_DIR/$PB_NAME and $PB_HOME entries…"
   rm -f "$PB_BIN_DIR/$PB_NAME"
   rm -rf "$PB_HOME"
-  # Leave shell rc markers in place (non-destructive policy)
   ok "Uninstalled command & profile dir. You may remove rc lines manually if desired."
 }
 
