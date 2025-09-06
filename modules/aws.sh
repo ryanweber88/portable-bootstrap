@@ -167,7 +167,8 @@ aws_status() {
 
     echo
     log "Default Region:"
-    local region=$(aws configure get region 2>/dev/null)
+    local region
+    region=$(aws configure get region 2>/dev/null)
     if [ -n "$region" ]; then
       echo "  $region"
     else

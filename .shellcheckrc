@@ -7,11 +7,11 @@ disable=SC1090
 # SC1091: Not following sourced files (external dependencies like nvm)
 disable=SC1091
 
-# SC2016: Expressions don't expand in single quotes (intentional in some cases)
-# disable=SC2016
+# SC2034: Variable appears unused (some variables are exported for external use or defined for future use)
+disable=SC2034
 
-# SC2034: Variable appears unused (some variables are exported for external use)
-# disable=SC2034
+# SC2155: Declare and assign separately (acceptable for simple directory/version queries)
+disable=SC2155
 
-# SC2155: Declare and assign separately (acceptable for simple cases)
-# disable=SC2155
+# SC2016: Expressions don't expand in single quotes (intentional in template strings)
+disable=SC2016
