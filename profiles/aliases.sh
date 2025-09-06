@@ -9,4 +9,8 @@ alias gpf='git push --force-with-lease'
 alias gb='git branch'
 alias gco='git checkout'
 alias gd='git diff'
-alias diff='git diff'
+alias dif='git diff'
+
+# General
+alias ll='ls -la'
+alias l='ls -la'

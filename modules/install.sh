@@ -35,7 +35,7 @@ generate_profile_files() {
 }
 
 wire_shell_startup() {
-  local marker="# portable-bootstrap"
+  local marker="# portable-bootstrap: main"
   while IFS= read -r f; do
     touch "$f"
     if ! grep -Fq "$marker" "$f"; then
@@ -66,11 +66,12 @@ install_git_completions() {
 'if [ -f "'"$PB_COMPLETIONS_DIR"'/git-completion.bash" ]; then . "'"$PB_COMPLETIONS_DIR"'/git-completion.bash"; fi'
   fi
 
-  # Zsh: autoload _git via fpath
+  # Zsh: autoload _git via fpath and configure bash completion path
   cp -f "$PB_COMPLETIONS_DIR/git-completion.zsh" "$PB_ZFUNCDIR/_git"
   local zshrc="${ZDOTDIR:-$HOME}/.zshrc"
   [ -f "$zshrc" ] || touch "$zshrc"
   append_once "$zshrc" "# portable-bootstrap: zfunc path" 'fpath=("'"$PB_ZFUNCDIR"'" $fpath)'
+  append_once "$zshrc" "# portable-bootstrap: git completion script path" 'zstyle ":completion:*:*:git:*" script "'"$PB_COMPLETIONS_DIR"'/git-completion.bash"'
   append_once "$zshrc" "# portable-bootstrap: compinit" 'autoload -Uz compinit; compinit -i'
 
   ok "Git completions installed and wired."
@@ -81,7 +82,16 @@ install() {
   generate_profile_files
   wire_shell_startup
   install_git_completions
-  ok "Install complete. Open a NEW terminal to load aliases & completions."
+  
+  # Install Node.js stack if not already present
+  if ! has_node || ! has_npm || ! has_nvm; then
+    log "Setting up Node.js development environment..."
+    install_node_stack
+  else
+    log "Node.js stack already available - Node: $(get_node_version), npm: $(get_npm_version), NVM: $(get_nvm_version)"
+  fi
+  
+  ok "Install complete. Open a NEW terminal to load aliases, completions & Node.js environment."
 }
 
 uninstall() {

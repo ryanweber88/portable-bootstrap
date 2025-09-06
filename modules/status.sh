@@ -11,6 +11,9 @@ status() {
   detect_shell_rc_files | tr '\n' ' '; echo
   printf "Brew:     "
   brew_detect
+  echo
+  node_status
+  echo
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "Repo:     $(git rev-parse --show-toplevel)"
     echo "Origin:   $(git remote get-url origin 2>/dev/null || echo 'none')"

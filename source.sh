@@ -25,13 +25,15 @@ usage() {
 pb v$PB_VERSION - portable bootstrap toolkit
 
 Commands:
-  install                 Install command, generate profiles, wire shell, git completions
+  install                 Install command, generate profiles, wire shell, git completions, node stack
   status                  Show environment info and git repo/default-branch if present
   new-repo <name>         Create new repo, push to GitHub
   brew:install-arm        Install Apple Silicon Homebrew (macOS)
   brew:install-intel      Install Intel/Rosetta Homebrew (macOS)
   brew:use-arm            Prefer Apple Silicon Homebrew in current shell
   brew:use-intel          Prefer Intel Homebrew in current shell
+  node:install            Install NVM and latest Node.js/npm
+  node:status             Show Node.js/npm/NVM versions and status
   uninstall               Remove installed command and profile directory
   help                    Show this help
 USAGE
@@ -46,6 +48,8 @@ case "$cmd" in
   brew:install-intel) brew_install_intel ;;
   brew:use-arm)       brew_use_arm ;;
   brew:use-intel)     brew_use_intel ;;
+  node:install)       install_node_stack ;;
+  node:status)        node_status ;;
   uninstall)          uninstall ;;
   help|--help|-h)     usage ;;
   *)                  die "Unknown command: $cmd (try 'help')" ;;
