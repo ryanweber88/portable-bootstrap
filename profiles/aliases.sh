@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Cross-shell aliases & functions for portability.
 
 # Git QOL
@@ -13,4 +14,9 @@ alias dif='git diff'
 
 # General
 alias ll='ls -la'
+alias la='ls -la'
+alias tf='terraform'
+alias tfi='terraform init'
+alias tfp='terraform plan'
+alias tfa='terraform apply'
 alias l='ls -la'

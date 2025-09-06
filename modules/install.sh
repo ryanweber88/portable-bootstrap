@@ -17,10 +17,19 @@ detect_shell_rc_files() {
 
 install_command() {
   ensure_dir "$PB_BIN_DIR"
-  ln -sf "$PB_SCRIPT_PATH" "$PB_BIN_DIR/$PB_NAME"
+  ensure_dir "$PB_HOME/modules"
+
+  # Copy the main script
+  cp "$PB_SCRIPT_PATH" "$PB_BIN_DIR/$PB_NAME"
+  chmod +x "$PB_BIN_DIR/$PB_NAME"
+
+  # Copy all modules to the home directory
+  local modules_source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  cp -f "$modules_source_dir"/*.sh "$PB_HOME/modules/"
+
   ensure_in_path
   command -v "$PB_NAME" >/dev/null || die "Failed to install $PB_NAME into PATH."
-  ok "Installed command '$PB_NAME' into $PB_BIN_DIR"
+  ok "Installed command '$PB_NAME' into $PB_BIN_DIR with modules in $PB_HOME/modules"
 }
 
 generate_profile_files() {
@@ -28,10 +37,29 @@ generate_profile_files() {
 
   # Copy canonical profiles into PB_HOME
   local profile_source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd ../profiles && pwd)"
-  cp -f "$profile_source_dir/aliases.sh" "$PB_HOME/aliases.sh"
-  cp -f "$profile_source_dir/path.sh" "$PB_HOME/path.sh"
+  local aliases_updated=false
+  local path_updated=false
 
-  ok "Generated profile files in $PB_HOME"
+  # Check if aliases.sh needs updating (source is newer or destination doesn't exist)
+  if [ ! -f "$PB_HOME/aliases.sh" ] || [ "$profile_source_dir/aliases.sh" -nt "$PB_HOME/aliases.sh" ]; then
+    cp -f "$profile_source_dir/aliases.sh" "$PB_HOME/aliases.sh"
+    aliases_updated=true
+    log "Updated aliases.sh"
+  fi
+
+  # Check if path.sh needs updating (source is newer or destination doesn't exist)
+  if [ ! -f "$PB_HOME/path.sh" ] || [ "$profile_source_dir/path.sh" -nt "$PB_HOME/path.sh" ]; then
+    cp -f "$profile_source_dir/path.sh" "$PB_HOME/path.sh"
+    path_updated=true
+    log "Updated path.sh"
+  fi
+
+  if [ "$aliases_updated" = true ] || [ "$path_updated" = true ]; then
+    ok "Profile files updated in $PB_HOME"
+    log "Restart your shell or run 'source ~/.zshrc' to load new aliases"
+  else
+    log "Profile files are up to date"
+  fi
 }
 
 wire_shell_startup() {
@@ -82,7 +110,7 @@ install() {
   generate_profile_files
   wire_shell_startup
   install_git_completions
-  
+
   # Install Node.js stack if not already present
   if ! has_node || ! has_npm || ! has_nvm; then
     log "Setting up Node.js development environment..."
@@ -90,8 +118,24 @@ install() {
   else
     log "Node.js stack already available - Node: $(get_node_version), npm: $(get_npm_version), NVM: $(get_nvm_version)"
   fi
-  
-  ok "Install complete. Open a NEW terminal to load aliases, completions & Node.js environment."
+
+  # Install Terraform if not already present
+  if ! command -v terraform >/dev/null 2>&1; then
+    log "Installing Terraform..."
+    terraform_install
+  else
+    log "Terraform already available - $(terraform_detect)"
+  fi
+
+  # Install AWS CLI if not already present
+  if ! command -v aws >/dev/null 2>&1; then
+    log "Installing AWS CLI..."
+    aws_install
+  else
+    log "AWS CLI already available - $(aws_detect)"
+  fi
+
+  ok "Install complete. Open a NEW terminal to load aliases, completions & development environment."
 }
 
 uninstall() {

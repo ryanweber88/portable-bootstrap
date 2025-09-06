@@ -113,7 +113,7 @@ node_status() {
   printf "  Node.js: %s\n" "$(get_node_version)"
   printf "  npm:     %s\n" "$(get_npm_version)"
   printf "  NVM:     %s\n" "$(get_nvm_version)"
-  
+
   if has_nvm; then
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
@@ -126,21 +126,21 @@ node_status() {
 
 install_node_stack() {
   log "Setting up Node.js development environment..."
-  
+
   # Check current status
   local node_ver="$(get_node_version)"
   local npm_ver="$(get_npm_version)"
   local nvm_ver="$(get_nvm_version)"
-  
+
   log "Current versions - Node: $node_ver, npm: $npm_ver, NVM: $nvm_ver"
-  
+
   # Install NVM if not present
   if ! has_nvm; then
     install_nvm
   else
     log "NVM already available ($nvm_ver)"
   fi
-  
+
   # Install latest Node.js if not present or if installed outside NVM
   if ! has_node; then
     install_latest_node
@@ -148,7 +148,7 @@ install_node_stack() {
     # Check if Node was installed via NVM
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-    
+
     if command -v nvm >/dev/null 2>&1; then
       local current_node="$(nvm current 2>/dev/null)"
       if [[ "$current_node" == "system" ]] || [[ "$current_node" == "none" ]]; then
@@ -161,10 +161,10 @@ install_node_stack() {
       log "Node.js found ($node_ver) but NVM not available in current session"
     fi
   fi
-  
+
   # Setup shell environment
   setup_node_environment
-  
+
   ok "Node.js stack setup complete!"
   node_status
 }

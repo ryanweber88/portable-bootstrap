@@ -1,0 +1,17 @@
+# ShellCheck configuration for portable-bootstrap
+# Disable certain checks that are not applicable to this project
+
+# SC1090: ShellCheck can't follow non-constant source
+disable=SC1090
+
+# SC1091: Not following sourced files (external dependencies like nvm)
+disable=SC1091
+
+# SC2016: Expressions don't expand in single quotes (intentional in some cases)
+# disable=SC2016
+
+# SC2034: Variable appears unused (some variables are exported for external use)
+# disable=SC2034
+
+# SC2155: Declare and assign separately (acceptable for simple cases)
+# disable=SC2155

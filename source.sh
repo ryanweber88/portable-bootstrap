@@ -15,10 +15,20 @@ PB_NAME="${PB_NAME:-pb}"  # the command name to install
 PB_COMPLETIONS_DIR="$PB_HOME/completions"
 PB_ZFUNCDIR="$PB_COMPLETIONS_DIR/zfunc"   # for zsh autoloaded functions
 
-# Source all modules
-for f in "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/modules/*.sh; do
-  . "$f"
-done
+# Source all modules - check both development and installed locations
+if [ -d "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/modules" ]; then
+  # Development mode - modules are in ./modules/
+  for f in "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/modules/*.sh; do
+    . "$f"
+  done
+elif [ -d "$PB_HOME/modules" ]; then
+  # Installed mode - modules are in $PB_HOME/modules/
+  for f in "$PB_HOME/modules"/*.sh; do
+    . "$f"
+  done
+else
+  die "Cannot find portable-bootstrap modules"
+fi
 
 usage() {
   cat <<USAGE
@@ -34,6 +44,20 @@ Commands:
   brew:use-intel          Prefer Intel Homebrew in current shell
   node:install            Install NVM and latest Node.js/npm
   node:status             Show Node.js/npm/NVM versions and status
+  terraform:install       Install Terraform
+  terraform:update        Update Terraform to latest version
+  terraform:init [dir]    Initialize Terraform workspace (defaults to current dir)
+  terraform:validate [dir] Validate Terraform configuration
+  terraform:plan [dir]    Run terraform plan
+  terraform:apply [dir]   Run terraform apply
+  aws:install             Install AWS CLI
+  aws:update              Update AWS CLI to latest version
+  aws:configure           Configure AWS CLI interactively
+  aws:configure-profile <name> Configure AWS CLI profile
+  aws:list-profiles       List all AWS CLI profiles
+  aws:status              Show AWS CLI status and current identity
+  aws:set-region <region> [profile] Set AWS region
+  aws:sso-login [profile] Login to AWS SSO
   uninstall               Remove installed command and profile directory
   help                    Show this help
 USAGE
@@ -50,6 +74,20 @@ case "$cmd" in
   brew:use-intel)     brew_use_intel ;;
   node:install)       install_node_stack ;;
   node:status)        node_status ;;
+  terraform:install)  terraform_install ;;
+  terraform:update)   terraform_update ;;
+  terraform:init)     terraform_init_workspace "$@" ;;
+  terraform:validate) terraform_validate_config "$@" ;;
+  terraform:plan)     terraform_plan "$@" ;;
+  terraform:apply)    terraform_apply "$@" ;;
+  aws:install)        aws_install ;;
+  aws:update)         aws_update ;;
+  aws:configure)      aws_configure_interactive ;;
+  aws:configure-profile) aws_configure_profile "$@" ;;
+  aws:list-profiles)  aws_list_profiles ;;
+  aws:status)         aws_status ;;
+  aws:set-region)     aws_set_region "$@" ;;
+  aws:sso-login)      aws_login_sso "$@" ;;
   uninstall)          uninstall ;;
   help|--help|-h)     usage ;;
   *)                  die "Unknown command: $cmd (try 'help')" ;;

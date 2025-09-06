@@ -10,7 +10,7 @@ new_repo() {
   local name="${1:-}"; [ -z "$name" ] && die "Usage: pb new-repo <name>"
   require gh; require git
   log "Creating new repo '$name' …"
-  mkdir -p "$name" && cd "$name"
+  mkdir -p "$name" && cd "$name" || return
   git init
   cat > README.md <<EOF
 # $name

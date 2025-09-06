@@ -11,6 +11,10 @@ status() {
   detect_shell_rc_files | tr '\n' ' '; echo
   printf "Brew:     "
   brew_detect
+  printf "Terraform: "
+  terraform_detect
+  printf "AWS CLI:   "
+  aws_detect
   echo
   node_status
   echo
