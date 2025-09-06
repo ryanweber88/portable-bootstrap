@@ -135,6 +135,10 @@ install() {
     log "AWS CLI already available - $(aws_detect)"
   fi
 
+  # Install Python 2 and 3 if not already present
+  log "Setting up Python environment..."
+  python_install
+
   ok "Install complete. Open a NEW terminal to load aliases, completions & development environment."
 }
 

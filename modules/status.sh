@@ -18,6 +18,8 @@ status() {
   echo
   node_status
   echo
+  python_status
+  echo
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "Repo:     $(git rev-parse --show-toplevel)"
     echo "Origin:   $(git remote get-url origin 2>/dev/null || echo 'none')"

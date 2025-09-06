@@ -57,9 +57,13 @@ Commands:
   aws:list-profiles       List all AWS CLI profiles
   aws:status              Show AWS CLI status and current identity
   aws:set-region <region> [profile] Set AWS region
-  aws:sso-login [profile] Login to AWS SSO
-  uninstall               Remove installed command and profile directory
-  help                    Show this help
+  aws:sso-login [profile] Perform SSO login for AWS profile
+  python:install          Install Python 2 and Python 3 with pip
+  python:update           Update Python and pip to latest versions
+  python:set-default <2|3> Set default Python version for 'python' command
+  python:status           Show Python and pip versions and status
+  uninstall               Remove pb command and ~/.portable-bootstrap
+  help                    Show this help message
 USAGE
 }
 
@@ -88,6 +92,10 @@ case "$cmd" in
   aws:status)         aws_status ;;
   aws:set-region)     aws_set_region "$@" ;;
   aws:sso-login)      aws_login_sso "$@" ;;
+  python:install)     python_install ;;
+  python:update)      python_update ;;
+  python:set-default) python_set_default "$@" ;;
+  python:status)      python_status ;;
   uninstall)          uninstall ;;
   help|--help|-h)     usage ;;
   *)                  die "Unknown command: $cmd (try 'help')" ;;

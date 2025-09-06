@@ -3,12 +3,21 @@
 
 log() { printf "➜ %s\n" "$*"; }
 ok()  { printf "✅ %s\n" "$*"; }
+warn() { printf "⚠️ %s\n" "$*" >&2; }
 err() { printf "❌ %s\n" "$*" >&2; }
 die() { err "$*"; exit 1; }
 
 is_macos() { [[ "$(uname -s)" == "Darwin" ]]; }
 is_linux() { [[ "$(uname -s)" == "Linux" ]]; }
 arch_name() { uname -m; }  # arm64 or x86_64 typically on macOS
+
+os_name() {
+  case "$(uname -s)" in
+    Darwin) echo "macos" ;;
+    Linux) echo "linux" ;;
+    *) echo "unknown" ;;
+  esac
+}
 
 ensure_dir() { mkdir -p "$1"; }
 

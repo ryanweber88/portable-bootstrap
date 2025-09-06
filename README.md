@@ -7,7 +7,8 @@ It automates the setup of shell profiles, essential development tools, cloud inf
 ## Features
 
 - **One-Command Setup**: Run `./pb install` to get everything set up automatically
-- **Comprehensive Tool Management**: Installs and manages Terraform, AWS CLI, Node.js, Git, and Homebrew
+- **Comprehensive Tool Management**: Installs and manages Terraform, AWS CLI, Python 2/3, Node.js, Git, and Homebrew
+- **Python Environment Management**: Simultaneous Python 2 and 3 support with pip, pipx, and pyenv integration
 - **Idempotent & Safe**: Scripts can be run multiple times without causing issues
 - **Modular & Extensible**: Core logic is broken into modules with clear separation of concerns
 - **Centralized Profiles**: Customize aliases and PATH settings in the `profiles/` directory
@@ -17,6 +18,28 @@ It automates the setup of shell profiles, essential development tools, cloud inf
 - **Cloud-Ready**: AWS CLI integration with profile management and SSO support
 - **Quality Assurance**: Automated linting with ShellCheck and GitHub Actions CI/CD
 - **Smart Updates**: Only updates profile files when changes are detected
+
+## Python Environment Management
+
+The toolkit provides comprehensive Python support with both Python 2 and 3 installed simultaneously:
+
+### Installation Features
+- **Python 3**: Installed via Homebrew (recommended approach)
+- **Python 2**: Installed via pyenv with proper build dependencies (zlib, openssl, readline, etc.)
+- **Pip Management**: Both pip2 and pip3 with user-space installations
+- **Pipx Integration**: For isolated Python application management
+- **Version Switching**: Configure which version the `python` command uses
+
+### Command Access
+- `python2` - Always references Python 2.x
+- `python3` - Always references Python 3.x  
+- `python` - Configurable default (switchable between versions)
+- `pip2` - Package manager for Python 2
+- `pip3` - Package manager for Python 3
+- `pipx` - Isolated application installer
+
+### Safe Package Management
+All pip operations use the `--user` flag to avoid system-wide installations and respect Python's externally-managed-environment protections (PEP 668). This ensures compatibility with Homebrew's Python management while maintaining a clean system.
 
 ## Project Structure
 
@@ -32,6 +55,7 @@ portable-bootstrap/
 │   ├── git.sh             # Git tools and completions
 │   ├── install.sh         # Installation and profile management
 │   ├── node.sh            # Node.js and npm management
+│   ├── python.sh          # Python 2/3 and pip management
 │   ├── status.sh          # Environment status reporting
 │   └── terraform.sh       # Terraform installation and commands
 ├── profiles/              # User-customizable profiles
@@ -58,12 +82,13 @@ portable-bootstrap/
     ```
 
 This will:
-- Install essential development tools (Terraform, AWS CLI) if not present
+- Install essential development tools (Terraform, AWS CLI, Python 2/3) if not present
 - Create a symbolic link to the `pb` script at `~/.local/bin/pb`
 - Create the `~/.portable-bootstrap` directory to store generated profiles and completions
 - Copy the contents of `profiles/` into `~/.portable-bootstrap/` (only when files are updated)
 - Add the necessary `source` commands to your `~/.bashrc` or `~/.zshrc` file
 - Set up shell aliases and PATH configurations
+- Configure Python environments with pip, pipx, and pyenv
 
 3.  **Restart your shell** or open a new terminal window to apply the changes.
 
@@ -100,6 +125,12 @@ This will:
 - `pb aws:status`: Show comprehensive AWS configuration status
 - `pb aws:set-region <region> [profile]`: Set AWS region for profile
 - `pb aws:sso-login [profile]`: Perform AWS SSO login
+
+### Python Commands
+- `pb python:install` - Install Python 2 and Python 3 with pip and pipx
+- `pb python:update` - Update Python and pip to latest versions
+- `pb python:set-default <2|3>` - Set default Python version for 'python' command
+- `pb python:status` - Show Python and pip versions and status
 
 ### Node.js Management
 - `pb node:install`: Install Node.js via nvm
